@@ -5,8 +5,8 @@ const About = () => {
     <div className="flex flex-col items-center justify-center h-screen space-y-6">
       <h2 className="text-4xl font-bold">About Me</h2>
       <p className="text-center">
-        I'm a senior React developer with 7 years of experience. I specialize in
-        building modern web applications and have expertise in the following
+        I am a senior React developer with 7 years of experience. I specialize
+        in building modern web applications and have expertise in the following
         technologies:
       </p>
       <div className="flex items-center justify-center space-x-4">
