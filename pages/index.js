@@ -47,7 +47,6 @@ export default function HomePage() {
         {/* <CursorCracks /> */}
         {/* <ParticlesBackground /> */}
         <section id="appointmentletter">
-          //make a url to pdf file in the public folder
           <a
             href="/AppointmentLetter.pdf"
             download
