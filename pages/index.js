@@ -63,9 +63,7 @@ export default function HomePage() {
             download
             className="flex items-center justify-center w-full h-screen bg-gradient-to-r from-gray-800 via-indigo-900 to-gray-900"
           >
-            <h1 className="text-5xl font-bold text-white">
-              Appointment Letter
-            </h1>
+            <h1 className="text-5xl font-bold text-white">Handbook</h1>
           </a>
         </section>
         <section id="home">
