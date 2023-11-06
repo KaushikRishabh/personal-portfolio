@@ -1,6 +1,10 @@
+import BackgroundAnimation from "./BackgroundAnimation";
+
 const Contact = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen space-y-6">
+    // <div className="flex flex-col items-center justify-center h-screen space-y-6">
+    <div className="flex flex-col items-center justify-center relative h-screen bg-gradient-to-r from-gray-800 via-indigo-900 to-gray-900">
+      {/* <BackgroundAnimation /> */}
       <h2 className="text-4xl font-bold">Contact Me</h2>
       <form className="w-full max-w-sm">
         <div className="py-2">

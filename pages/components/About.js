@@ -1,8 +1,12 @@
 import { FaReact, FaNodeJs, FaHtml5, FaCss3Alt } from "react-icons/fa";
+import BackgroundAnimation from "./BackgroundAnimation";
 
 const About = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen space-y-6">
+    // <div className="flex flex-col items-center justify-center h-screen space-y-6">
+    <div className="relative h-screen bg-gradient-to-r from-gray-800 via-indigo-900 to-gray-900">
+      {/* <BackgroundAnimation /> */}
+
       <h2 className="text-4xl font-bold">About Me</h2>
       <p className="text-center">
         I am a senior React developer with 7 years of experience. I specialize
