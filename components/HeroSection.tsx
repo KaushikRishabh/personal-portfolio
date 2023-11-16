@@ -8,6 +8,7 @@ import ContactButton from "./ContactButton";
 import DownloadButton from "./DownloadButton";
 
 const HeroSection = () => {
+  //
   return (
     <motion.section
       initial={{ opacity: 0, scale: 0.5 }}
