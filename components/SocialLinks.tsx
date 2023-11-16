@@ -7,6 +7,7 @@ import {
   AiOutlineInbox,
 } from "react-icons/ai";
 import { FaThreads } from "react-icons/fa6";
+import { FaXTwitter } from "react-icons/fa6";
 
 const SocialLinkItems = [
   {
@@ -17,7 +18,7 @@ const SocialLinkItems = [
   {
     title: "Threads",
     icon: <FaThreads />,
-    href: "https://instagram.com/0xkaushikk",
+    href: "https://www.threads.net/@0xkaushikk",
   },
   {
     title: "LinkedIn",
@@ -29,6 +30,11 @@ const SocialLinkItems = [
   //   icon: <AiOutlineInbox />,
   //   href: "https://rishabhkaushik.dev",
   // },
+  {
+    title: "Twitter/X",
+    icon: <FaXTwitter />,
+    href: "   https://twitter.com/0xkaushikk",
+  },
 ];
 
 const SocialLinks = () => {
