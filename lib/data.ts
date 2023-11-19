@@ -4,7 +4,7 @@ export const NAV_LINKS = [
   { title: "Projects", href: "#projects" },
   { title: "Contact", href: "#contact" },
 ] as const;
-
+//
 export const PROJECTS = [
   {
     id: 0,
