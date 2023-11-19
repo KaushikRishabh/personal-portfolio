@@ -15,12 +15,14 @@ function renderEmailContent(
   message: string
 ) {
   return `
-<div>
+    <html>
+      <body>
         <h1>You received the following message from the contact form</h1>
         <h2>Title: ${title}</h2>
         <p>Detail: ${message}</p>
         <p>The sender's email is: ${senderEmail}</p>
-    </div>
+      </body>
+    </html>
   `;
 }
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -59,11 +61,12 @@ export async function sendEmail(formData: FormData) {
       to: "reachmeatrish@gmail.com",
       subject: "Message from Contact Form",
       reply_to: senderEmail as string,
-      react: createElement(emailHtml, {
-        message: message as string,
-        title: title as string,
-        senderEmail: senderEmail as string,
-      }),
+      html: emailHtml,
+      //react: createElement(ContactFormEmail, {
+      //   message: message as string,
+      //   title: title as string,
+      //   senderEmail: senderEmail as string,
+      // }),
     });
   } catch (error: unknown) {
     return {
