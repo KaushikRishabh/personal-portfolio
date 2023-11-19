@@ -61,12 +61,11 @@ export async function sendEmail(formData: FormData) {
       to: "reachmeatrish@gmail.com",
       subject: "Message from Contact Form",
       reply_to: senderEmail as string,
-      react: emailHtml,
-      // createElement(ContactFormEmail, {
-      //   message: message as string,
-      //   title: title as string,
-      //   senderEmail: senderEmail as string,
-      // }),
+      react: createElement(emailHtml, {
+        message: message as string,
+        title: title as string,
+        senderEmail: senderEmail as string,
+      }),
     });
   } catch (error: unknown) {
     return {
