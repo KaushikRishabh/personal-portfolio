@@ -15,14 +15,12 @@ function renderEmailContent(
   message: string
 ) {
   return `
-    <html>
-      <body>
+<div>
         <h1>You received the following message from the contact form</h1>
         <h2>Title: ${title}</h2>
         <p>Detail: ${message}</p>
         <p>The sender's email is: ${senderEmail}</p>
-      </body>
-    </html>
+    </div>
   `;
 }
 const resend = new Resend(process.env.RESEND_API_KEY);
