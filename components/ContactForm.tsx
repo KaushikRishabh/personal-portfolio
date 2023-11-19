@@ -14,6 +14,7 @@ const ContactForm = () => {
 
         if (error) {
           toast.error(error);
+          console.log(error);
           return;
         }
         toast.success("Your email has been sent successfully!");
