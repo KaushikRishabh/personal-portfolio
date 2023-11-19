@@ -6,8 +6,22 @@ import SocialLinks from "./SocialLinks";
 import ProfileImage from "./ProfileImage";
 import ContactButton from "./ContactButton";
 import DownloadButton from "./DownloadButton";
+import { useEffect, useState } from "react";
 
 const HeroSection = () => {
+  const [visitorCount, setVisitorCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/visitorCount")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.count) {
+          setVisitorCount(data.count);
+          console.log("vis count", data.count);
+        }
+      })
+      .catch((error) => console.error("Error fetching visitor count:", error));
+  }, []);
   ////
   return (
     <motion.section
