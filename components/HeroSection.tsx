@@ -7,12 +7,14 @@ import ProfileImage from "./ProfileImage";
 import ContactButton from "./ContactButton";
 import DownloadButton from "./DownloadButton";
 import { useEffect, useState } from "react";
+import { collection, getDocs, getFirestore } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
 const HeroSection = () => {
   const [visitorCount, setVisitorCount] = useState(0);
 
   useEffect(() => {
-    fetch("/api/visitorCount")
+    fetch("/api/visitorcount")
       .then((response) => response.json())
       .then((data) => {
         if (data.count) {
@@ -21,7 +23,36 @@ const HeroSection = () => {
         }
       })
       .catch((error) => console.error("Error fetching visitor count:", error));
+
+    // Check if this is a unique visit
+    const isUniqueVisit = !localStorage.getItem("visited");
+    if (isUniqueVisit) {
+      // Increment the visitor count
+      fetch("/api/visitor", { method: "GET" })
+        .then(() => {
+          // Mark this visitor as counted
+          localStorage.setItem("visited", "true");
+        })
+        .catch((error) =>
+          console.error("Error incrementing visitor count:", error)
+        );
+    }
   }, []);
+
+  // const db = getFirestore(app);
+  const [data, setData]: any = useState([]);
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const querySnapshot = await getDocs(collection(db, "visitors"));
+  //     console.log("querySnapshot", querySnapshot);
+  //     const dataList = querySnapshot.docs.map((doc) => doc.data());
+  //     console.log("dataList", dataList);
+  //     setData(dataList);
+  //   };
+
+  //   fetchData();
+  // }, []);
   ////
   return (
     <motion.section
@@ -31,6 +62,7 @@ const HeroSection = () => {
       className="flex flex-col gap-8 items-center lg:py-10 h-full"
       id="home"
     >
+      <div>Visitor Count: {visitorCount}</div>
       <ProfileImage />
       <div className="text-center sm:text-left h-full">
         <h1 className="mb-4 text-3xl lg:text-5xl font-extrabold">
