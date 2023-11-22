@@ -63,7 +63,7 @@ export const TAB_DATA = [
   {
     title: "Skills",
     id: "skills",
-    content: ["React", "JavaScript", "TypeScript", "Next.js"],
+    content: ["React", "JavaScript", "TypeScript", "Next.js", "HTML/CSS"],
   },
   {
     title: "Education",
