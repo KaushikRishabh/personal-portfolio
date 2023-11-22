@@ -12,7 +12,7 @@ const ContactSection = () => {
         <a href="mailto:reachmeatrish@gmail.com" className="underline">
           Email me
         </a>{" "}
-        Or contact me directly or using the form below.
+        Or contact me directly using the form below.
       </p>
       <ContactForm />
     </section>
