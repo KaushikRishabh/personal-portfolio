@@ -1,5 +1,4 @@
 import SectionTitle from "./SectionTitle";
-import ContactForm from "./ContactForm";
 
 const ContactSection = () => {
   return (
@@ -11,10 +10,9 @@ const ContactSection = () => {
       <p className="mb-4 text-center text-sm md:text-lg">
         <a href="mailto:reachmeatrish@gmail.com" className="underline">
           Email me
-        </a>{" "}
-        Or contact me directly using the form below.
+        </a> to get in touch.
       </p>
-      <ContactForm />
+      <p className="text-center text-sm">reachmeatrish@gmail.com</p>
     </section>
   );
 };

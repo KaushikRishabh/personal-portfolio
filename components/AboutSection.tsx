@@ -1,5 +1,7 @@
 "use client";
 
+import { assetPath } from "@/lib/asset-path";
+
 import Image from "next/image";
 import { Tab, Tabs } from "@nextui-org/react";
 import { TAB_DATA } from "@/lib/data";
@@ -14,7 +16,7 @@ const AboutSection = () => {
       <SectionTitle title="About Me" />
       <div className="col-span-2 flex items-center justify-center w-36 h-36 self-center sm:self-start lg:w-fit lg:h-fit justify-self-center">
         <Image
-          src={"/about-image.png"}
+          src={assetPath("/about-image.png")}
           alt="About Image"
           priority
           width={200}

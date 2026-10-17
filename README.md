@@ -1,34 +1,37 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Rishabh Kaushik’s portfolio
 
-## Getting Started
+A statically exported Next.js portfolio hosted for free on GitHub Pages.
 
-First, run the development server:
+## Development
 
-```bash
+Use Node.js 24 (Node.js 22 or later is required).
+
+```sh
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Production checks
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+npm run lint
+NEXT_PUBLIC_BASE_PATH=/personal-portfolio npm run build
+npm run typecheck
+NEXT_PUBLIC_BASE_PATH=/personal-portfolio npm run test:export
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+The build creates `out/`. All images and the resume use the configured base path.
+For a root-domain host, omit `NEXT_PUBLIC_BASE_PATH` when building.
 
-## Learn More
+## GitHub Pages
 
-To learn more about Next.js, take a look at the following resources:
+In repository **Settings → Pages**, set **Source** to **GitHub Actions** once.
+The workflow in `.github/workflows/deploy-pages.yml` checks and publishes every
+push to `main`, and can also be run manually from the Actions tab.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Public address: https://kaushikrishabh.github.io/personal-portfolio/
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+No API keys, Firebase, email provider, server process, or paid hosting are needed.
+The contact link opens the visitor’s email app. The old server-dependent email
+form and visitor counter are retained in Git history rather than exposed as
+non-working controls. The resume is `public/CV.pdf`.

@@ -1,3 +1,5 @@
+
+import { assetPath } from "@/lib/asset-path";
 import { AiOutlineGithub } from "react-icons/ai";
 import { PROJECTS } from "@/lib/data";
 import {
@@ -29,7 +31,7 @@ const ProjectCard = ({
           <Image
             alt="Card background"
             className="object-cover rounded-md border dark:border-none"
-            src={image}
+            src={assetPath(image)}
             width={270}
           />
         </a>

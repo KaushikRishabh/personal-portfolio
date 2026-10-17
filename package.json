@@ -6,34 +6,31 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test:export": "node scripts/verify-export.mjs"
   },
   "dependencies": {
     "@nextui-org/react": "^2.2.9",
-    "@react-email/button": "0.0.10",
-    "@react-email/components": "^0.0.7",
-    "@react-email/html": "0.0.4",
-    "@react-email/tailwind": "0.0.9",
     "@types/node": "20.5.0",
     "@types/react": "18.2.20",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "10.4.15",
-    "encoding": "^0.1.13",
-    "eslint": "8.47.0",
-    "eslint-config-next": "13.4.16",
-    "firebase": "^10.6.0",
+    "eslint": "8.57.1",
+    "eslint-config-next": "15.5.28",
     "framer-motion": "^10.16.4",
-    "next": "^13.5.4",
+    "next": "15.5.28",
     "next-themes": "^0.2.1",
-    "postcss": "8.4.31",
+    "postcss": "^8.5.23",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-email": "1.9.5",
     "react-hot-toast": "^2.4.1",
     "react-icons": "^4.11.0",
     "react-type-animation": "^3.2.0",
-    "resend": "^1.1.0",
-    "tailwindcss": "3.3.3",
+    "tailwindcss": "^3.4.19",
     "typescript": "5.2.2"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
