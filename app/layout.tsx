@@ -1,38 +1,13 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { assetPath } from "@/lib/asset-path";
 import localFont from "next/font/local";
-import { Header, Footer } from "@/components";
-import { Providers } from "./providers";
-import { Toaster } from "react-hot-toast";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
-
-const inter = localFont({
-  src: "./fonts/PretendardVariable.woff2",
-  display: "swap",
-  variable: "--font-inter",
-});
-
+const inter = localFont({ src: "./fonts/PretendardVariable.woff2", display: "swap", variable: "--font-inter" });
 export const metadata: Metadata = {
-  title: "Rishabh Kaushik | Developer Portfolio",
-  description: "Rishabh Kaushik’s developer portfolio, projects, skills, and resume.",
+  icons: { icon: assetPath("/icon.svg") },
+  title: "Rishabh Kaushik — Full Stack Engineer",
+  description: "Full stack engineering, thoughtful interfaces, and a little orbital mechanics. Explore Rishabh Kaushik’s work, experience, and resume.",
 };
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
-      <body>
-        <Providers>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          <ThemeSwitcher />
-          <Toaster position="top-center" />
-        </Providers>
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <html lang="en" className={inter.variable}><body>{children}</body></html>;
 }
