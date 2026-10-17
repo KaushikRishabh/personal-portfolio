@@ -35,3 +35,12 @@ No API keys, Firebase, email provider, server process, or paid hosting are neede
 The contact link opens the visitor’s email app. The old server-dependent email
 form and visitor counter are retained in Git history rather than exposed as
 non-working controls. The resume is `public/CV.pdf`.
+
+## Observatory design and gravity lab
+
+The homepage uses Framer Motion for section and filter transitions and a lightweight
+canvas orbital experiment. The scene is original code-drawn pixel art; no external
+asset or animation service is needed. Keyboard-accessible controls change the
+simulation, pause it, and restore its initial conditions. Reduced-motion preferences
+are respected. The gravity model uses scaled units and a fixed central mass, not a
+real solar-system model. Public work samples remain linked to their source repositories.
