@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:export": "node scripts/verify-export.mjs"
+    "test:export": "node scripts/verify-export.mjs",
+    "test:physics": "node scripts/test-orbital.mjs"
   },
   "dependencies": {
     "@nextui-org/react": "^2.2.9",
