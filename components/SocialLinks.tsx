@@ -33,7 +33,7 @@ const SocialLinkItems = [
   {
     title: "Twitter/X",
     icon: <FaXTwitter />,
-    href: "   https://twitter.com/0xkaushikk",
+    href: "https://twitter.com/0xkaushikk",
   },
 ];
 
@@ -45,7 +45,7 @@ const SocialLinks = () => {
           key={item.title}
           className="rounded-full border-2 shadow-md p-3 w-fit h-fit hover:bg-gradient-to-br hover:from-primary-500 hover:to-secondary-500 hover:text-white group relative"
         >
-          <Link href={item.href}>{item.icon}</Link>
+          <Link href={item.href} aria-label={item.title}>{item.icon}</Link>
           <span className="absolute z-20 top-14 scale-0 transition-all rounded border text-xs p-1.5 group-hover:scale-100 text-black dark:text-white">
             {item.title}
           </span>
