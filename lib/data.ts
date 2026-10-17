@@ -11,7 +11,7 @@ export const PROJECTS = [
     title: "Twit-X-Clone",
     description: "A Next.js project",
     tags: ["TypeScript", "Next.js"],
-    image: "/twit-x-clone.png", // Replace with actual image path
+    image: "/twit-x-clone.webp", // Replace with actual image path
     githubUrl: "https://github.com/KaushikRishabh/twit-x-clone",
     category: ["All", "Web"],
     releaseDate: "Unknown", // Replace with actual date
@@ -21,7 +21,7 @@ export const PROJECTS = [
     title: "YouTube Clone React",
     description: "A Next.js project",
     tags: ["TypeScript", "Next.js", "SCSS"],
-    image: "/youtube-clone.png", // Replace with actual image path
+    image: "/youtube-clone.webp", // Replace with actual image path
     githubUrl: "https://github.com/KaushikRishabh/youtube-clone-react",
     category: ["All", "Web"],
     releaseDate: "Unknown", // Replace with actual date
@@ -31,7 +31,7 @@ export const PROJECTS = [
     title: "Shoply",
     description: "Ecom store + marketplace for buying and selling products",
     tags: ["TypeScript", "Next.js", "Tailwind"],
-    image: "/shoply.png", // Replace with actual image path
+    image: "/shoply.webp", // Replace with actual image path
     githubUrl: "https://github.com/KaushikRishabh/shoply",
     category: ["All", "Web"],
     releaseDate: "Unknown", // Replace with actual date
@@ -41,7 +41,7 @@ export const PROJECTS = [
   //   title: "Calendler Clone",
   //   description: "React + Vite template",
   //   tags: ["React", "Vite"], // Assumed based on description
-  //   image: "/placeholder-image.png", // Replace with actual image path
+  //   image: "/placeholder-image.webp", // Replace with actual image path
   //   githubUrl: "https://github.com/KaushikRishabh/calendler-clone",
   //   category: ["All", "Web"],
   //   releaseDate: "Unknown", // Replace with actual date
@@ -51,7 +51,7 @@ export const PROJECTS = [
     title: "Promodoro",
     description: "Pomodoro Timer",
     tags: ["React", "javascript"], // Assumed based on description
-    image: "/promodoro.png", // Replace with actual image path
+    image: "/promodoro.webp", // Replace with actual image path
     githubUrl: "https://github.com/KaushikRishabh/promodoro",
     category: ["All", "Web"],
     releaseDate: "Unknown", // Replace with actual date
