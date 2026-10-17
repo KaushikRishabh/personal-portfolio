@@ -3,60 +3,35 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Point = { x: number; y: number };
-type Probe = Point & {
-  vx: number;
-  vy: number;
-  color: string;
-  trail: Point[];
-  alive: boolean;
-  id: number;
-};
+import {
+  FIXED_DT, MAX_PROBES, MAX_SPEED, STAR_RADIUS, clampGravity,
+  createProbe, createSimulationState, estimateThrowVelocity, stepPhysics,
+  type CollisionEvent, type MotionSample, type PhysicsProbe, type Point,
+} from "@/lib/orbital-physics";
 
+type Probe = PhysicsProbe & { color: string; trail: Point[] };
+type Spark = Point & { vx: number; vy: number; life: number; duration: number; color: string; size: number };
+type Ring = Point & { life: number; duration: number; star: boolean };
+type Gesture = {
+  pointerId: number; startClient: Point; position: Point; samples: MotionSample[]; dragged: boolean;
+};
 const W = 760;
 const H = 490;
 const CENTER = { x: 423, y: 225 };
-const MU = 420000;
-const STEP = 1 / 120;
+const STEP = FIXED_DT;
 const COLORS = ["#8ebcd2", "#b4c7a2", "#eeaa75", "#dfb8d0", "#e9d9a8"];
 
-function makeProbe(radius: number, angle: number, speed: number, id: number): Probe {
-  const velocity = Math.sqrt(MU / radius) * speed;
-  const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius;
-  return { x, y, vx: -Math.sin(angle) * velocity, vy: Math.cos(angle) * velocity, color: COLORS[id % COLORS.length], trail: [], alive: true, id };
-}
-
 function initialProbes(): Probe[] {
-  const probes = [makeProbe(90, -0.95, 1, 0), makeProbe(153, 2.85, 0.93, 1), makeProbe(199, 0.65, 0.91, 2)];
-  // Integrate backward for a short prehistory so the first frame is a complete scene.
-  probes.forEach((probe) => {
-    const previous = { ...probe, trail: [] };
-    for (let sample = 0; sample < 170; sample++) {
-      for (let step = 0; step < 5; step++) integrate(previous, -STEP, MU);
+  return createSimulationState().probes.map((body) => {
+    const probe: Probe = { ...body, color: COLORS[body.id % COLORS.length], trail: [] };
+    // A short reversed-velocity prehistory makes the first frame feel alive.
+    const previous = createProbe(body.id, body, { x: -body.vx, y: -body.vy });
+    for (let sample = 0; sample < 150; sample++) {
+      stepPhysics([previous], 1 / 24, 1);
       probe.trail.unshift({ x: previous.x, y: previous.y });
     }
+    return probe;
   });
-  return probes;
-}
-
-// Velocity Verlet: a fixed, symplectic step preserves bounded orbital motion.
-function integrate(probe: Probe, dt: number, mu: number) {
-  if (!probe.alive) return;
-  const r = Math.hypot(probe.x, probe.y);
-  const a = -mu / (r * r * r);
-  const ax = a * probe.x;
-  const ay = a * probe.y;
-  probe.x += probe.vx * dt + 0.5 * ax * dt * dt;
-  probe.y += probe.vy * dt + 0.5 * ay * dt * dt;
-  const nextR = Math.hypot(probe.x, probe.y);
-  if (nextR < 29 || nextR > 1100) {
-    probe.alive = false;
-    return;
-  }
-  const nextA = -mu / (nextR * nextR * nextR);
-  probe.vx += 0.5 * (ax + nextA * probe.x) * dt;
-  probe.vy += 0.5 * (ay + nextA * probe.y) * dt;
 }
 
 function Icon({ kind }: { kind: "pause" | "play" | "reset" | "kick" | "add" }) {
@@ -74,15 +49,26 @@ function Icon({ kind }: { kind: "pause" | "play" | "reset" | "kick" | "add" }) {
 export default function OrbitalExhibit() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
-  const probesRef = useRef<Probe[]>(initialProbes());
+  const [initial] = useState(initialProbes);
+  const probesRef = useRef<Probe[]>(initial);
+  const sparksRef = useRef<Spark[]>([]);
+  const ringsRef = useRef<Ring[]>([]);
+  const gestureRef = useRef<Gesture | null>(null);
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emitEventsRef = useRef<(events: CollisionEvent[]) => void>(() => {});
+  const countersRef = useRef({ bounces: 0, absorbed: 0 });
+  const [telemetry, setTelemetry] = useState({ active: 3, bounces: 0, absorbed: 0 });
+  const [throwSpeed, setThrowSpeed] = useState(140);
+  const [throwDirection, setThrowDirection] = useState("up");
   const pausedRef = useRef(true);
   const gravityRef = useRef(1);
   const drawRef = useRef<() => void>(() => {});
   const resumeRef = useRef<() => void>(() => {});
+  const resetRuntimeRef = useRef<() => void>(() => {});
   const nextId = useRef(3);
   const [paused, setPaused] = useState(true);
   const [gravity, setGravity] = useState(1);
-  const [message, setMessage] = useState("Three probes. One star. A little curiosity.");
+  const [message, setMessage] = useState("Click to drop. Drag and release to throw. Faster flicks fly faster.");
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -108,42 +94,66 @@ export default function OrbitalExhibit() {
   const reset = useCallback(() => {
     probesRef.current = initialProbes();
     nextId.current = 3;
-    gravityRef.current = 1;
+    gravityRef.current = createSimulationState().gravity;
+    sparksRef.current = [];
+    ringsRef.current = [];
+    gestureRef.current = null;
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    countersRef.current = { bounces: 0, absorbed: 0 };
+    setTelemetry({ active: 3, bounces: 0, absorbed: 0 });
     setGravity(1);
-    setMessage("Flight paths reset. Ready for another experiment.");
+    resetRuntimeRef.current();
+    setMessage("Reset: three starter probes, gravity 1.0×, and collision counters cleared.");
     drawRef.current();
   }, []);
 
-  const launch = useCallback((position?: Point) => {
-    const angle = position ? Math.atan2(position.y, position.x) : -2.2 + nextId.current * 0.61;
-    const radius = position ? Math.min(210, Math.max(65, Math.hypot(position.x, position.y))) : 185;
-    const probe = makeProbe(radius, angle, Math.sqrt(gravityRef.current), nextId.current++);
-    const alive = probesRef.current.filter((p) => p.alive);
-    if (alive.length >= 5) alive.shift();
-    probesRef.current = [...alive, probe];
-    setMessage(`Probe ${String(probe.id + 1).padStart(2, "0")} deployed into a circular orbit.${pausedRef.current ? " Press Play to fly." : ""}`);
+  const launch = useCallback((position: Point, velocity: Point, dropped = false) => {
+    const body = createProbe(nextId.current++, position, velocity);
+    const probe: Probe = { ...body, color: COLORS[body.id % COLORS.length], trail: [] };
+    const active = probesRef.current.filter((p) => p.alive);
+    const retired = active.length >= MAX_PROBES;
+    if (retired) active.shift();
+    probesRef.current = [...active, probe];
+    const speed = Math.round(Math.hypot(probe.vx, probe.vy));
+    if (Math.hypot(probe.x, probe.y) <= STAR_RADIUS + probe.radius) {
+      probe.alive = false;
+      emitEventsRef.current([{ type: "star", x: probe.x, y: probe.y, probeIds: [probe.id], speed }]);
+      setMessage("Probe absorbed by Sol on contact. Try releasing farther from the star.");
+    } else {
+      setMessage(`${dropped || speed === 0 ? "Dropped" : "Thrown"} probe ${String(probe.id + 1).padStart(2, "0")} at ${speed} u/s.${pausedRef.current ? " Press Play to simulate." : ""}${retired ? " Oldest probe retired (16-probe limit)." : ""}`);
+    }
+    setTelemetry({ active: probesRef.current.filter((p) => p.alive).length, ...countersRef.current });
     drawRef.current();
   }, []);
 
-  const kick = useCallback(() => {
-    const alive = probesRef.current.filter((p) => p.alive);
-    const probe = alive[alive.length - 1];
-    if (!probe) {
-      setMessage("No active probes. Launch a new one to keep exploring.");
-      return;
+  const keyboardLaunch = useCallback((drop: boolean) => {
+    const position = { x: -185, y: -20 };
+    const directions: Record<string, Point> = { up: { x: 0, y: -1 }, right: { x: 1, y: 0 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 } };
+    const direction = directions[throwDirection];
+    launch(position, drop ? { x: 0, y: 0 } : { x: direction.x * throwSpeed, y: direction.y * throwSpeed }, drop);
+  }, [launch, throwDirection, throwSpeed]);
+
+  const pointerPoint = (event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): Point => {
+    const bounds = canvas.getBoundingClientRect();
+    return { x: (event.clientX - bounds.left) / bounds.width * W - CENTER.x, y: (event.clientY - bounds.top) / bounds.height * H - CENTER.y };
+  };
+
+  const addPointerSample = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const samples = typeof event.nativeEvent.getCoalescedEvents === "function" ? event.nativeEvent.getCoalescedEvents() : [];
+    for (const sample of samples) {
+      const point = pointerPoint(sample, event.currentTarget);
+      gesture.samples.push({ ...point, time: sample.timeStamp });
     }
-    // A modest prograde impulse changes the orbit's energy and eccentricity.
-    const speed = Math.hypot(probe.vx, probe.vy);
-    const boost = Math.min(1.12, 110 / Math.max(speed, 0.01));
-    if (boost <= 1) {
-      setMessage("Thruster speed limit reached. Reset to try a fresh orbit.");
-      return;
-    }
-    probe.vx *= boost;
-    probe.vy *= boost;
-    setMessage(`Prograde impulse applied to probe ${String(probe.id + 1).padStart(2, "0")}.${pausedRef.current ? " Press Play to see its new path." : " Watch its orbit stretch."}`);
-    drawRef.current();
-  }, []);
+    const position = pointerPoint(event, event.currentTarget);
+    gesture.position = position;
+    gesture.samples.push({ ...position, time: event.timeStamp });
+    if (Math.hypot(event.clientX - gesture.startClient.x, event.clientY - gesture.startClient.y) > 5) gesture.dragged = true;
+    // Keep a little more than the velocity window; include one older anchor sample.
+    while (gesture.samples.length > 2 && gesture.samples[1].time < event.timeStamp - 180) gesture.samples.shift();
+    if (gesture.samples.length > 100) gesture.samples.splice(0, gesture.samples.length - 100);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -156,6 +166,8 @@ export default function OrbitalExhibit() {
     let accumulator = 0;
     let simTime = 0;
     let trailClock = 0;
+    let telemetryClock = 0;
+    const contactCooldown = new Map<string, number>();
     let visible = true;
     let destroyed = false;
     let logicalScale = 1;
@@ -165,6 +177,29 @@ export default function OrbitalExhibit() {
       return seed / 2147483647;
     };
     const stars = Array.from({ length: 103 }, () => ({ x: random() * W, y: random() * 416 + 25, size: random() > 0.93 ? 2.5 : 1.2, alpha: random() * 0.43 + 0.12 }));
+
+    emitEventsRef.current = (events) => {
+      for (const event of events) {
+        if (event.type === "escape") continue;
+        const key = event.type + event.probeIds.join(":");
+        if ((contactCooldown.get(key) ?? -Infinity) > simTime - 0.12) continue;
+        contactCooldown.set(key, simTime);
+        if (contactCooldown.size > 128) contactCooldown.delete(contactCooldown.keys().next().value as string);
+        const star = event.type === "star";
+        if (star) countersRef.current.absorbed++;
+        else countersRef.current.bounces++;
+        const count = star ? 18 : 8;
+        const duration = star ? 0.7 : 0.4;
+        ringsRef.current.push({ x: event.x, y: event.y, life: duration, duration, star });
+        if (ringsRef.current.length > 10) ringsRef.current.shift();
+        for (let i = 0; i < count; i++) {
+          const angle = Math.PI * 2 * (i / count) + random() * 0.25;
+          const speed = (star ? 34 : 20) + random() * (star ? 70 : 45);
+          sparksRef.current.push({ x: event.x, y: event.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: duration, duration, color: star ? i % 3 ? "#f1b669" : "#fff0c3" : i % 2 ? "#bce0d6" : "#e9c5a0", size: star ? 3 : 2 });
+        }
+        if (sparksRef.current.length > 140) sparksRef.current.splice(0, sparksRef.current.length - 140);
+      }
+    };
 
     const rect = (x: number, y: number, w: number, h: number, color: string) => {
       ctx.fillStyle = color;
@@ -246,33 +281,6 @@ export default function OrbitalExhibit() {
       rect(CENTER.x - 15, CENTER.y - 9, 4, 7, "#ffeac1");
       rect(CENTER.x + 8, CENTER.y + 10, 7, 3, "#e3a052");
 
-      probesRef.current.forEach((probe) => {
-        if (probe.trail.length > 1) {
-          for (let i = 0; i < probe.trail.length; i++) {
-            ctx.globalAlpha = (i / probe.trail.length) * (probe.alive ? 0.55 : 0.14);
-            rect(CENTER.x + probe.trail[i].x - 1, CENTER.y + probe.trail[i].y - 1, 2, 2, probe.color);
-          }
-          ctx.globalAlpha = 1;
-        }
-        if (!probe.alive) return;
-        const x = CENTER.x + probe.x;
-        const y = CENTER.y + probe.y;
-        // Solar wings and body remain square to keep the low-resolution language.
-        rect(x - 13, y - 5, 8, 10, "#263b49");
-        rect(x - 12, y - 4, 6, 3, probe.color);
-        rect(x - 12, y + 1, 6, 3, probe.color);
-        rect(x + 5, y - 5, 8, 10, "#263b49");
-        rect(x + 6, y - 4, 6, 3, probe.color);
-        rect(x + 6, y + 1, 6, 3, probe.color);
-        rect(x - 6, y - 1, 12, 2, "#d8cbb1");
-        rect(x - 3, y - 5, 6, 10, "#efe0ba");
-        rect(x - 2, y - 3, 4, 3, "#dca46d");
-        rect(x - 1, y - 9, 2, 4, "#a9b9bd");
-        ctx.fillStyle = "#81929b";
-        ctx.font = "9px monospace";
-        ctx.fillText(String(probe.id + 1).padStart(2, "0"), x + 18, y + 3);
-      });
-
       // Faraway ridge and a ground station, framing rather than obscuring the orbits.
       const ridge = [454, 454, 447, 447, 440, 440, 445, 445, 452, 452, 445, 445, 451, 451, 442, 442, 448, 448, 454, 454, 440, 440, 434, 434, 443, 443, 436, 436, 447, 447, 452, 452];
       ridge.forEach((height, i) => rect(i * 25, height, 25, H - height, "#1b2d39"));
@@ -313,9 +321,73 @@ export default function OrbitalExhibit() {
       ctx.fillText("E", 650, CENTER.y + 3);
       ctx.fillStyle = "#b99b71";
       ctx.fillText("SOL / 01", CENTER.x - 24, CENTER.y + 49);
+
+      probesRef.current.forEach((probe) => {
+        if (probe.trail.length > 1) {
+          for (let i = 0; i < probe.trail.length; i++) {
+            ctx.globalAlpha = (i / probe.trail.length) * (probe.alive ? 0.55 : 0.14);
+            rect(CENTER.x + probe.trail[i].x - 1, CENTER.y + probe.trail[i].y - 1, 2, 2, probe.color);
+          }
+          ctx.globalAlpha = 1;
+        }
+        if (!probe.alive) return;
+        const x = CENTER.x + probe.x;
+        const y = CENTER.y + probe.y;
+        // Solar wings and body remain square to keep the low-resolution language.
+        rect(x - 13, y - 5, 8, 10, "#263b49");
+        rect(x - 12, y - 4, 6, 3, probe.color);
+        rect(x - 12, y + 1, 6, 3, probe.color);
+        rect(x + 5, y - 5, 8, 10, "#263b49");
+        rect(x + 6, y - 4, 6, 3, probe.color);
+        rect(x + 6, y + 1, 6, 3, probe.color);
+        rect(x - 6, y - 1, 12, 2, "#d8cbb1");
+        rect(x - 3, y - 5, 6, 10, "#efe0ba");
+        rect(x - 2, y - 3, 4, 3, "#dca46d");
+        rect(x - 1, y - 9, 2, 4, "#a9b9bd");
+        ctx.fillStyle = "#81929b";
+        ctx.font = "9px monospace";
+        ctx.fillText(String(probe.id + 1).padStart(2, "0"), x + 18, y + 3);
+      });
+
+      ringsRef.current.forEach((ring) => {
+        const progress = 1 - ring.life / ring.duration;
+        ctx.globalAlpha = (1 - progress) * 0.7;
+        const radius = 6 + progress * (ring.star ? 45 : 21);
+        for (let i = 0; i < 16; i++) {
+          const angle = i / 16 * Math.PI * 2;
+          rect(CENTER.x + ring.x + Math.cos(angle) * radius, CENTER.y + ring.y + Math.sin(angle) * radius, 2, 2, ring.star ? "#efb76e" : "#b5d4c9");
+        }
+      });
+      sparksRef.current.forEach((spark) => {
+        ctx.globalAlpha = Math.max(0, spark.life / spark.duration);
+        rect(CENTER.x + spark.x, CENTER.y + spark.y, spark.size, spark.size, spark.color);
+      });
+      ctx.globalAlpha = 1;
+      const gesture = gestureRef.current;
+      if (gesture) {
+        const { x, y } = gesture.position;
+        const velocity = gesture.dragged ? estimateThrowVelocity(gesture.samples, performance.now()) : { x: 0, y: 0 };
+        const speed = Math.hypot(velocity.x, velocity.y);
+        const arrowScale = Math.min(0.25, 90 / Math.max(1, speed));
+        pixelLine(CENTER.x + x, CENTER.y + y, CENTER.x + x + velocity.x * arrowScale, CENTER.y + y + velocity.y * arrowScale, "#eac689", 2);
+        ctx.strokeStyle = "#eac689";
+        ctx.setLineDash([3, 4]);
+        ctx.strokeRect(CENTER.x + x - 11, CENTER.y + y - 11, 22, 22);
+        ctx.setLineDash([]);
+        rect(CENTER.x + x - 3, CENTER.y + y - 3, 6, 6, "#f0d7a1");
+        ctx.font = "10px monospace";
+        ctx.fillStyle = "#f0d7a1";
+        ctx.fillText(`${Math.round(speed)} u/s`, CENTER.x + x + 17, CENTER.y + y - 14);
+      }
+
+
     };
 
     drawRef.current = draw;
+    resetRuntimeRef.current = () => {
+      simTime = 0; accumulator = 0; trailClock = 0; telemetryClock = 0; last = 0;
+      contactCooldown.clear();
+    };
     const resize = () => {
       const width = container.clientWidth;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -353,19 +425,34 @@ export default function OrbitalExhibit() {
       if (!pausedRef.current) {
         accumulator += delta;
         while (accumulator >= STEP) {
-          probesRef.current.forEach((probe) => integrate(probe, STEP, MU * gravityRef.current));
+          emitEventsRef.current(stepPhysics(probesRef.current, STEP, gravityRef.current));
+          sparksRef.current.forEach((spark) => {
+            spark.x += spark.vx * STEP; spark.y += spark.vy * STEP; spark.life -= STEP;
+          });
+          sparksRef.current = sparksRef.current.filter((spark) => spark.life > 0);
+          ringsRef.current.forEach((ring) => { ring.life -= STEP; });
+          ringsRef.current = ringsRef.current.filter((ring) => ring.life > 0);
           simTime += STEP;
           trailClock += STEP;
+          telemetryClock += STEP;
           accumulator -= STEP;
           if (trailClock >= 1 / 24) {
             trailClock = 0;
             probesRef.current.forEach((probe) => {
               if (probe.alive) {
                 probe.trail.push({ x: probe.x, y: probe.y });
-                if (probe.trail.length > 180) probe.trail.shift();
+                if (probe.trail.length > 120) probe.trail.shift();
+              } else if (probe.trail.length) {
+                probe.trail.shift();
               }
             });
           }
+        }
+        if (telemetryClock >= 0.2) {
+          telemetryClock = 0;
+          const active = probesRef.current.filter((probe) => probe.alive).length;
+          const { bounces, absorbed } = countersRef.current;
+          setTelemetry((previous) => previous.active === active && previous.bounces === bounces && previous.absorbed === absorbed ? previous : { active, bounces, absorbed });
         }
         draw();
       } else {
@@ -383,6 +470,10 @@ export default function OrbitalExhibit() {
       document.removeEventListener("visibilitychange", visibilityChange);
       drawRef.current = () => {};
       resumeRef.current = () => {};
+      resetRuntimeRef.current = () => {};
+      emitEventsRef.current = () => {};
+      gestureRef.current = null;
+      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     };
   }, []);
 
@@ -399,16 +490,55 @@ export default function OrbitalExhibit() {
           ref={canvasRef}
           width={W}
           height={H}
-          aria-label="Three pixel satellites orbit an amber sun, watched by an astronaut at a lunar ground station. Use the buttons below to control the simulation or launch another probe."
+          aria-label="Interactive orbital simulator. Click or tap to drop a probe with zero initial velocity. Drag then release to throw from the release point, using your recent movement speed. Probes bounce off one another and are absorbed by Sol. Equivalent Drop and Throw controls are below."
+          aria-describedby="orbital-instructions"
           role="img"
-          onClick={(event) => {
-            const bounds = event.currentTarget.getBoundingClientRect();
-            const x = (event.clientX - bounds.left) / bounds.width * W - CENTER.x;
-            const y = (event.clientY - bounds.top) / bounds.height * H - CENTER.y;
-            if (event.clientY - bounds.top < bounds.height * 0.88) launch({ x, y });
+          onPointerDown={(event) => {
+            if (!event.isPrimary || event.button !== 0 || gestureRef.current) return;
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            const position = pointerPoint(event, event.currentTarget);
+            gestureRef.current = { pointerId: event.pointerId, startClient: { x: event.clientX, y: event.clientY }, position, samples: [{ ...position, time: event.timeStamp }], dragged: false };
+            drawRef.current();
+          }}
+          onPointerMove={(event) => {
+            if (gestureRef.current?.pointerId !== event.pointerId) return;
+            addPointerSample(event);
+            if (pausedRef.current) {
+              drawRef.current();
+              if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+              previewTimerRef.current = setTimeout(() => {
+                if (gestureRef.current) drawRef.current();
+              }, 90);
+            }
+          }}
+          onPointerUp={(event) => {
+            const gesture = gestureRef.current;
+            if (!gesture || gesture.pointerId !== event.pointerId) return;
+            addPointerSample(event);
+            const velocity = gesture.dragged ? estimateThrowVelocity(gesture.samples, event.timeStamp) : { x: 0, y: 0 };
+            gestureRef.current = null;
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+            // Captured pointers may release beyond the canvas; retain measured
+            // velocity but keep the new probe visible at the nearest edge.
+            const position = {
+              x: Math.max(8 - CENTER.x, Math.min(W - 8 - CENTER.x, gesture.position.x)),
+              y: Math.max(8 - CENTER.y, Math.min(H - 8 - CENTER.y, gesture.position.y)),
+            };
+            launch(position, velocity, !gesture.dragged);
+          }}
+          onPointerCancel={(event) => {
+            if (gestureRef.current?.pointerId !== event.pointerId) return;
+            gestureRef.current = null;
+            drawRef.current();
+          }}
+          onLostPointerCapture={(event) => {
+            if (gestureRef.current?.pointerId !== event.pointerId) return;
+            gestureRef.current = null;
+            drawRef.current();
           }}
         />
-        <span className="orbital-hint" aria-hidden="true">CLICK THE STARFIELD TO LAUNCH A PROBE <span>↗</span></span>
+        <span className="orbital-hint" aria-hidden="true">CLICK TO DROP<br />FLICK TO THROW <span>↗</span></span>
       </div>
       <div className="orbital-controls">
         <div className="orbital-buttons">
@@ -416,22 +546,40 @@ export default function OrbitalExhibit() {
             <Icon kind={paused ? "play" : "pause"} />{paused ? "Play" : "Pause"}
           </motion.button>
           <button type="button" onClick={reset} aria-label="Reset probes and gravity"><Icon kind="reset" />Reset</button>
-          <button type="button" onClick={kick} aria-label="Give the newest active probe a forward velocity impulse"><Icon kind="kick" />Nudge</button>
-          <button type="button" onClick={() => launch()}><Icon kind="add" />Probe</button>
+          <button type="button" onClick={() => keyboardLaunch(true)} aria-label="Drop a probe at the launch point with zero initial velocity"><Icon kind="add" />Drop</button>
+          <button type="button" onClick={() => keyboardLaunch(false)} aria-label="Throw a probe from the launch point using the direction and speed controls below"><Icon kind="kick" />Throw</button>
         </div>
         <label className="orbital-gravity">GRAVITY
-          <input type="range" min="0.6" max="1.4" step="0.1" value={gravity} aria-label="Central gravity multiplier" aria-valuetext={`${gravity.toFixed(1)} times standard gravity`} onChange={(event) => {
-            const value = Number(event.target.value);
+          <span className="orbital-range-end">0.1×</span>
+          <input type="range" min="0.1" max="10" step="0.1" value={gravity} aria-label="Central gravity multiplier" aria-valuetext={`${gravity.toFixed(1)} times standard gravity`} onChange={(event) => {
+            const value = clampGravity(Number(event.target.value));
             gravityRef.current = value;
             setGravity(value);
-            setMessage(`Gravity set to ${value.toFixed(1)}×. Existing probe velocities are unchanged.${pausedRef.current ? " Press Play to see the effect." : ""}`);
+            setMessage(`Gravity set to ${value.toFixed(1)}×.${pausedRef.current ? " Press Play to see the effect." : ""}`);
           }} />
+          <span className="orbital-range-end">10×</span>
           <output>{gravity.toFixed(1)}×</output>
         </label>
       </div>
+      <details className="orbital-throw-details">
+        <summary>Throw settings <span>direction + speed</span></summary>
+        <div className="orbital-launch-settings" aria-label="Keyboard-accessible throw settings">
+        <span>BUTTON THROW</span>
+        <label>Direction <select aria-label="Throw direction" value={throwDirection} onChange={(event) => setThrowDirection(event.target.value)}>
+          <option value="up">↑ Up</option><option value="right">→ Right</option><option value="down">↓ Down</option><option value="left">← Left</option>
+        </select></label>
+        <label>Speed <select aria-label="Throw speed in scaled units per second" value={throwSpeed} onChange={(event) => setThrowSpeed(Number(event.target.value))}>
+          {[75, 140, 250, 450, MAX_SPEED].map((speed) => <option key={speed} value={speed}>{speed} u/s</option>)}
+        </select></label>
+        </div>
+      </details>
+      <div className="orbital-readout" aria-label="Simulation statistics">
+        <span><i />{telemetry.active}/{MAX_PROBES} PROBES</span><span>{telemetry.bounces} BOUNCES</span><span>{telemetry.absorbed} SOL IMPACTS</span>
+      </div>
       <figcaption className="orbital-caption">
+        <span className="orbital-instructions" id="orbital-instructions">Tap to drop · drag and release to throw · hold still to release at rest</span>
         <span className="orbital-note" aria-live="polite">{message}</span>
-        <span className="orbital-science">Scaled units · fixed star · test particles · no mutual gravity</span>
+        <span className="orbital-science">Toy 2D model · scaled flick speed (max 720 u/s) · equal-mass disk bounces · fixed Sol · no mutual gravity</span>
       </figcaption>
       <style jsx>{`
         .orbital-exhibit { width: 100%; margin: 0; overflow: hidden; background: #101e2b; border: 1px solid #34434d; color: #e3dfce; border-radius: 8px; box-shadow: 0 18px 45px rgba(6, 16, 25, .12); }
@@ -442,7 +590,7 @@ export default function OrbitalExhibit() {
         .orbital-status i { width: 5px; height: 5px; background: #a8c6ac; box-shadow: 0 0 8px #a8c6ac55; }
         .orbital-status i.is-paused { background: #d5aa72; box-shadow: none; }
         .orbital-scene { position: relative; width: 100%; line-height: 0; }
-        .orbital-scene canvas { display: block; width: 100%; height: auto; aspect-ratio: 760 / 490; cursor: crosshair; touch-action: pan-y; }
+        .orbital-scene canvas { display: block; width: 100%; height: auto; aspect-ratio: 760 / 490; cursor: crosshair; touch-action: none; user-select: none; }
         .orbital-coordinates, .orbital-formula, .orbital-hint { position: absolute; z-index: 1; pointer-events: none; font-family: var(--font-mono, "Courier New"), monospace; font-size: 9px; line-height: 1.8; letter-spacing: 1px; }
         .orbital-coordinates { left: 25px; top: 25px; color: #c1c0af; }
         .orbital-coordinates span { color: #687f8e; font-size: 8px; }
@@ -450,15 +598,29 @@ export default function OrbitalExhibit() {
         .orbital-hint { left: 25px; top: 43%; max-width: 145px; color: #788d95; font-size: 7px; letter-spacing: .7px; }
         .orbital-hint span { margin-left: 5px; color: #e0b67f; font-size: 12px; }
         .orbital-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 15px 20px; background: #142430; border-top: 1px solid #354650; }
-        .orbital-buttons { display: flex; align-items: center; gap: 6px; }
+        .orbital-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
         .orbital-buttons button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 10px; min-height: 36px; border: 1px solid #3a4a53; border-radius: 3px; background: transparent; color: #c0c9c5; font-family: inherit; font-size: 11px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
         .orbital-buttons :global(.orbital-primary) { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 11px; min-height: 36px; background: #e8bc7e; border: 1px solid #e8bc7e; border-radius: 3px; color: #172530; font-family: inherit; font-size: 11px; cursor: pointer; }
         .orbital-buttons button:hover { border-color: #d0b68c; color: #f3e7ce; background: #253642; }
         .orbital-buttons :global(.orbital-primary:hover) { background: #f5d29e; border-color: #f5d29e; color: #172530; }
         .orbital-buttons button:focus-visible, .orbital-buttons :global(.orbital-primary:focus-visible), .orbital-gravity input:focus-visible { outline: 2px solid #e8bc7e; outline-offset: 4px; }
-        .orbital-gravity { display: flex; align-items: center; gap: 9px; color: #91a4a9; font-family: var(--font-mono, "Courier New"), monospace; font-size: 8px; letter-spacing: 1px; }
-        .orbital-gravity input { width: 68px; height: 16px; accent-color: #deb27a; cursor: pointer; }
+        .orbital-gravity { display: flex; align-items: center; flex: 1; justify-content: flex-end; gap: 8px; color: #91a4a9; font-family: var(--font-mono, "Courier New"), monospace; font-size: 8px; letter-spacing: 1px; }
+        .orbital-gravity input { width: 110px; min-width: 70px; height: 16px; accent-color: #deb27a; cursor: pointer; }
         .orbital-gravity output { min-width: 30px; color: #d7cbb2; font-size: 10px; letter-spacing: 0; }
+        .orbital-range-end { font-size: 8px; color: #b7c2bb; letter-spacing: 0; }
+        .orbital-throw-details { border-top: 1px solid #2b3b46; }
+        .orbital-throw-details summary { padding: 10px 20px; color: #bdcbc6; font-family: var(--font-mono, "Courier New"), monospace; font-size: 10px; cursor: pointer; }
+        .orbital-throw-details summary span { float: right; color: #8098a2; font-size: 8px; padding-top: 2px; }
+        .orbital-throw-details summary:focus-visible { outline: 2px solid #e8bc7e; outline-offset: -3px; }
+        .orbital-launch-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 20px; border-top: 1px solid #2b3b46; font-family: var(--font-mono, "Courier New"), monospace; font-size: 8px; color: #a7b7b8; }
+        .orbital-launch-settings > span { margin-right: auto; color: #829da4; letter-spacing: .8px; }
+        .orbital-launch-settings label { display: flex; gap: 6px; align-items: center; }
+        .orbital-launch-settings select { border: 1px solid #3a505a; border-radius: 2px; padding: 5px; background: #172b37; color: #d0dacf; min-height: 30px; font: inherit; cursor: pointer; }
+        .orbital-launch-settings select:focus-visible { outline: 2px solid #e8bc7e; outline-offset: 3px; }
+        .orbital-readout { display: flex; flex-wrap: wrap; gap: 12px 20px; padding: 10px 21px; border-top: 1px solid #2b3b46; color: #9db3b5; font: 8px var(--font-mono, "Courier New"), monospace; letter-spacing: .6px; }
+        .orbital-readout span { display: inline-flex; align-items: center; gap: 6px; }
+        .orbital-readout i { width: 4px; height: 4px; background: #9fbea8; }
+        .orbital-instructions { color: #d7c9ac; font-size: 10px; line-height: 1.6; }
         .orbital-caption { display: flex; flex-direction: column; gap: 6px; padding: 13px 21px 15px; border-top: 1px solid #2b3b46; line-height: 1.5; }
         .orbital-note { color: #b6c1bd; font-size: 10px; min-height: 15px; }
         .orbital-science { color: #7f949d; font-family: var(--font-mono, "Courier New"), monospace; font-size: 8px; letter-spacing: .2px; }
@@ -473,7 +635,11 @@ export default function OrbitalExhibit() {
           .orbital-formula { right: 16px; top: 15px; font-size: 12px; }
           .orbital-hint { left: 15px; top: 41%; max-width: 100px; font-size: 6px; line-height: 1.8; }
           .orbital-caption { padding: 12px 14px; }
-          .orbital-gravity { margin-left: auto; }
+          .orbital-gravity { margin-left: auto; flex-basis: 100%; justify-content: space-between; }
+          .orbital-gravity input { flex: 1; max-width: 230px; }
+          .orbital-throw-details summary { padding: 10px 14px; }
+          .orbital-launch-settings { padding: 10px 14px; gap: 8px 10px; }
+          .orbital-readout { padding: 10px 14px; gap: 12px; font-size: 7px; }
         }
         @media (prefers-reduced-motion: reduce) { .orbital-buttons button { transition: none; } }
       `}</style>

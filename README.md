@@ -15,6 +15,7 @@ npm run dev
 
 ```sh
 npm run lint
+npm run test:physics
 NEXT_PUBLIC_BASE_PATH=/personal-portfolio npm run build
 npm run typecheck
 NEXT_PUBLIC_BASE_PATH=/personal-portfolio npm run test:export
@@ -40,7 +41,13 @@ non-working controls. The resume is `public/CV.pdf`.
 
 The homepage uses Framer Motion for section and filter transitions and a lightweight
 canvas orbital experiment. The scene is original code-drawn pixel art; no external
-asset or animation service is needed. Keyboard-accessible controls change the
-simulation, pause it, and restore its initial conditions. Reduced-motion preferences
+asset or animation service is needed. Drag and release inside the starfield to throw a probe: launch speed comes from
+recent pointer motion, not drag distance. Click or tap without dragging to drop a
+stationary probe. Keyboard-accessible controls offer equivalent drop/throw actions,
+pause the simulation, and restore its initial conditions. Gravity ranges from
+0.1× to 10×, with 1× as the reset default. Probes bounce off each other and are
+absorbed by the star with bounded pixel impact effects. Reduced-motion preferences
 are respected. The gravity model uses scaled units and a fixed central mass, not a
-real solar-system model. Public work samples remain linked to their source repositories.
+real solar-system model. Fixed timesteps, capped probe/effect counts and speed
+limits keep the playful simulation lightweight and stable. The physics tests cover
+gesture timing, gravity limits, collisions, star impacts and stress conditions. Public work samples remain linked to their source repositories.
