@@ -36,16 +36,16 @@ export const PROJECTS = [
     category: ["All", "Web"],
     releaseDate: "Unknown", // Replace with actual date
   },
-  // {
-  //   id: 3,
-  //   title: "Calendler Clone",
-  //   description: "React + Vite template",
-  //   tags: ["React", "Vite"], // Assumed based on description
-  //   image: "/placeholder-image.webp", // Replace with actual image path
-  //   githubUrl: "https://github.com/KaushikRishabh/calendler-clone",
-  //   category: ["All", "Web"],
-  //   releaseDate: "Unknown", // Replace with actual date
-  // },
+  {
+    id: 3,
+    title: "Calendler Clone",
+    description: "A React and Vite calendar prototype with week navigation, time slots, and event forms. Backend integration remains in progress.",
+    tags: ["React", "JavaScript", "Vite", "Prototype"],
+    image: "/calendler-preview.svg",
+    githubUrl: "https://github.com/KaushikRishabh/calendler-clone",
+    category: ["All", "Web"],
+    releaseDate: "In development",
+  },
   {
     id: 4,
     title: "Promodoro",

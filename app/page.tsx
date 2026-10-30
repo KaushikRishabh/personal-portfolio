@@ -11,6 +11,7 @@ const projectCopy: Record<string, string> = {
   "Twit-X-Clone": "A social interface experiment built with Next.js and TypeScript.",
   "YouTube Clone React": "Exploring the familiar patterns of a video discovery interface.",
   "Shoply": "An e-commerce store and marketplace for buying and selling products.",
+  "Calendler Clone": "A React and Vite calendar prototype with week navigation, time slots, and event forms. Backend integration remains in progress.",
   "Promodoro": "A focused Pomodoro timer for turning intention into progress.",
 };
 const experience = [
@@ -61,11 +62,18 @@ export default function Home() {
             <span className="placeme-art-label">DISCOVER. RANK. KEEP TRACK.</span>
           </div>
           <div className="placeme-info"><div className="placeme-top"><span className="eyebrow">PERSONAL TOOLKIT</span><span className="coming-soon">Personal tool</span></div><h3>Jobly<span className="amber">.</span></h3><p>A job-search automation toolkit that collects, ranks and tracks opportunities across multiple hiring platforms.</p><div className="tags"><span>Node.js</span><span>Playwright</span><span>Express</span></div></div>
+        </motion.article>
+        <motion.article layout={!reduced} className="placeme-card hushfind-card" {...reveal}>
+          <div className="placeme-art hushfind-art" role="img" aria-label="Concept illustration of private file search in Hushfind">
+            <svg viewBox="0 0 500 300" aria-hidden="true" shapeRendering="crispEdges"><rect width="500" height="300" fill="#283d3b"/><rect x="65" y="53" width="370" height="202" fill="#13252a" stroke="#66867b" strokeWidth="2"/><path d="M65 84h370M185 84v171" stroke="#405e58" strokeWidth="2"/><path d="M78 65h6v6h-6zm13 0h6v6h-6zm13 0h6v6h-6z" fill="#edba70"/><path d="M85 105h24v-6h18v6h31v25H85zm0 52h24v-6h18v6h31v25H85zm0 52h24v-6h18v6h31v25H85z" fill="#79978a"/><rect x="205" y="104" width="208" height="33" fill="#29433e" stroke="#78988a"/><circle cx="223" cy="119" r="6" fill="none" stroke="#edba70" strokeWidth="2"/><path d="m228 124 6 6M245 119h120" stroke="#a7c7b7" strokeWidth="2"/><path d="M208 159h13v17h-13zm0 31h13v17h-13zm0 31h13v17h-13z" fill="#edba70"/><path d="M235 164h142m-142 9h85m-85 22h116m-116 9h69m-69 22h129m-129 9h78" stroke="#7f9c8e" strokeWidth="3"/></svg>
+            <span className="placeme-art-label">PRIVATE FILES. OFFLINE SEARCH.</span>
+          </div>
+          <div className="placeme-info"><div className="placeme-top"><span className="eyebrow">IN THE WORKSHOP</span><span className="coming-soon">Coming soon</span></div><h3>Hushfind<span className="amber">.</span></h3><p>A native file explorer and search app built with Swift and SwiftUI, designed for private, offline use. Currently in development.</p><div className="tags"><span>Swift</span><span>SwiftUI</span><span>Offline search</span><span>In development</span></div></div>
         </motion.article></div>
         <div className="more-work-heading"><h3>More experiments</h3><p>Earlier builds and things learned along the way.</p></div>
         <div className="project-tools"><div className="filters" role="group" aria-label="Filter projects">{["All work","Next.js","React"].map(f=><button key={f} aria-pressed={filter===f} onClick={()=>setFilter(f)}>{f}</button>)}</div><span className="project-count" aria-live="polite">{String(projects.length).padStart(2,"0")} PROJECTS</span></div>
         <div className="project-grid">{projects.map((p,i)=><motion.article layout={!reduced} key={p.id} className="project-card" {...reveal}>
-          <a href={p.githubUrl} target="_blank" rel="noreferrer" className="project-image-link" aria-label={`Explore ${p.title} source on GitHub`}><div className={`project-image project-tone-${p.id}`}><div className="mini-window"><div className="window-bar"><i/><i/><i/><span>{p.title.toLowerCase().replaceAll(" ","-")}</span></div><Image src={assetPath(p.image)} alt={`${p.title} interface preview`} width={720} height={420}/></div><span className="project-open"><Arrow /></span></div></a>
+          <a href={p.githubUrl} target="_blank" rel="noreferrer" className="project-image-link" aria-label={`Explore ${p.title} source on GitHub`}><div className={`project-image project-tone-${p.id}`}><div className="mini-window"><div className="window-bar"><i/><i/><i/><span>{p.title.toLowerCase().replaceAll(" ","-")}</span></div><Image src={assetPath(p.image)} alt={p.id === 3 ? "Concept illustration of the Calendler calendar prototype" : `${p.title} interface preview`} width={720} height={420}/></div><span className="project-open"><Arrow /></span></div></a>
           <div className="project-info"><div className="project-title"><span className="project-number">0{i+1}</span><h3><a href={p.githubUrl} target="_blank" rel="noreferrer">{p.title}</a></h3><Arrow /></div><p>{projectCopy[p.title]}</p><div className="tags">{p.tags.map(t=><span key={t}>{t}</span>)}</div></div>
         </motion.article>)}</div>
         <section className="developer-tools" aria-labelledby="tools-title">
