@@ -1,0 +1,14 @@
+{
+  "purpose": "Personal source backup before Mac return",
+  "original_head": "e6acbcf75a1fc901874d0fcf2b651efda5074750",
+  "original_branch": "main",
+  "excluded": [
+    {
+      "path": "public/CV.pdf",
+      "reason": "sensitive document, local database, recording or archive"
+    }
+  ],
+  "history_screened": true,
+  "workflow_restore": "Files under .backup-workflows/ belong under .github/workflows/ when intentionally enabling CI.",
+  "dependency_restore": "Dependency folders, compiled artifacts and model packages are excluded; restore using project manifests and provenance docs."
+}
